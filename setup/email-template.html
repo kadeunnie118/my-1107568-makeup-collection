@@ -3,7 +3,7 @@
   Paste this into Supabase → Authentication → Emails, in BOTH templates:
     • "Magic Link"      subject: Your sign-in code for My Makeup
     • "Confirm signup"  subject: Your sign-in code for My Makeup
-  {{ .Token }} becomes the 6-digit code; {{ .ConfirmationURL }} becomes the link.
+  {{ .Token }} becomes the sign-in code; {{ .ConfirmationURL }} becomes the link.
 -->
 <div style="font-family:Arial,Helvetica,sans-serif;background:#FFF5F7;padding:24px;color:#3D2C3A">
   <div style="max-width:440px;margin:0 auto;background:#ffffff;border-radius:20px;padding:28px">
