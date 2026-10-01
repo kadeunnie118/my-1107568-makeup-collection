@@ -21,7 +21,7 @@ Use **••• → Save backup file** now and then.
 1. In this repository, open **Settings → Pages**.
 2. Under **Branch**, choose `main` and the `/ (root)` folder, then click **Save**.
 3. After a minute or two, your app is live at
-   `https://danita-tho.github.io/my-1107568-makeup-collection/`
+   `https://kadeunnie118.github.io/my-1107568-makeup-collection/`
 
 ## Add it to your phone's home screen
 
