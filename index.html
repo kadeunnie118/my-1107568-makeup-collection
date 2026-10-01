@@ -826,7 +826,8 @@
     if (/expired|invalid|token/i.test(m)) return 'That code didn\'t work. Check it, or ask for a new one.';
     if (/not authorized/i.test(m)) return 'This email can\'t receive codes yet. The app\'s email setup isn\'t finished.';
     if (/fetch|network|load/i.test(m) || navigator.onLine === false) return 'Couldn\'t connect. Check your internet and try again.';
-    return 'Something went wrong. Please try again.';
+    if (/sending|smtp|mail/i.test(m)) return 'We couldn\'t send the email right now. (Details: ' + m + ')';
+    return 'Something went wrong. Please try again.' + (m ? ' (Details: ' + m + ')' : '');
   }
 
   async function signOut() {
