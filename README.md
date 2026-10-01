@@ -2,12 +2,13 @@
 
 A simple web app to keep track of your makeup and tools, so you never buy a duplicate again.
 
-## What it does (version 1)
+## What it does
 
 - **Add an item**: take a photo, choose a category, type the brand. Product, shade and color are optional.
 - **My collection**: a photo grid you can search and filter by category.
 - **Do I already have this?**: type what you're about to buy (e.g. "nude lipstick") and see what you already own, plus similar colors.
 - **Duplicate warning**: if you add the same brand and shade twice, the app asks before saving.
+- **Barcode scanning** (new): on *Add item*, tap **Scan the barcode**. The app warns you if you already own that exact item, then looks the product up in [Open Beauty Facts](https://world.openbeautyfacts.org) (a free shared database) and asks **"Is this it?"** before filling in the brand and name. On *Do I already have this?*, tap **Scan a barcode** in the store to check instantly. If the camera can't read it, you can type the numbers under the barcode instead.
 - **Backup**: save your collection to a file and restore it later (tap the ••• button on the home screen).
 
 ## Important: where your data is saved
@@ -16,7 +17,14 @@ Everything is saved **only on the phone or computer you use**, inside the browse
 It does not sync between devices, and clearing the browser's website data will erase it.
 Use **••• → Save backup file** now and then.
 
-## Put it online with GitHub Pages
+## How updates go live
+
+The main address is **https://makeup.danitalab.com** (Hostinger).
+Hostinger is connected to this repository: every change saved to the `main` branch is copied
+to the `public_html/makeup` folder automatically, usually within a minute.
+(Hostinger dashboard → Websites → danitalab.com → Advanced → Git.)
+
+## Also online with GitHub Pages
 
 1. In this repository, open **Settings → Pages**.
 2. Under **Branch**, choose `main` and the `/ (root)` folder, then click **Save**.
@@ -38,7 +46,7 @@ Use **••• → Save backup file** now and then.
 
 ## Ideas for later
 
-1. Barcode scanning
+1. ~~Barcode scanning~~ (done)
 2. A shared product catalog, so items can be matched automatically
 3. Reading the brand and shade from the photo
 4. Scanning a whole drawer at once
