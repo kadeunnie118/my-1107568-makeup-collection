@@ -8,7 +8,7 @@ A simple web app to keep track of your makeup and tools, so you never buy a dupl
 - **My collection**: a photo grid you can search and filter by category.
 - **Do I already have this?**: type what you're about to buy (e.g. "nude lipstick") and see what you already own, plus similar colors.
 - **Duplicate warning**: if you add the same brand and shade twice, the app asks before saving.
-- **Barcode scanning** (new): on *Add item*, tap **Scan the barcode**. The app warns you if you already own that exact item, then looks the product up in [Open Beauty Facts](https://world.openbeautyfacts.org) (a free shared database) and asks **"Is this it?"** before filling in the brand and name. On *Do I already have this?*, tap **Scan a barcode** in the store to check instantly. If the camera can't read it, you can type the numbers under the barcode instead.
+- **Barcode scanning**: on *Add item*, tap **Scan the barcode** to save it with the item (the app warns you if you already own that exact barcode). On *Do I already have this?*, tap **Scan a barcode** in the shop to check instantly against your own collection. If the camera can't read it, type the numbers under the barcode instead. No outside product database is used.
 - **Accounts (optional)**: tap the person button to sign in with your email (we email you a sign-in code, no password). Your items and photos are then saved online and appear on all your devices. You can sign out or delete your account at any time. Signing in isn't required.
 - **Backup**: save your collection to a file and restore it later (tap the ••• button on the home screen).
 

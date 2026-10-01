@@ -126,9 +126,6 @@
   .scan-status { color: #fff; font-weight: 700; text-align: center; min-height: 22px; }
   .btn.light { background: #fff; color: var(--text); box-shadow: none; }
   .btn.ghost { background: transparent; color: #fff; border: 2px solid rgba(255, 255, 255, 0.6); box-shadow: none; }
-  .found { display: flex; align-items: center; gap: 14px; background: var(--card); border-radius: 18px; padding: 12px; }
-  .found .mini { width: 64px; height: 64px; border-radius: 14px; background: var(--surface); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #8E2A4A; }
-  .found .mini img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
 </style>
 </head>
 <body>
@@ -510,76 +507,6 @@
       }
 
       startCamera();
-    });
-  }
-
-  // ---------- Product lookup (Open Beauty Facts, a free shared database) ----------
-  const lookupCache = {};
-  function guessCategory(text) {
-    const t = String(text || '').toLowerCase();
-    if (/nail|vernis/.test(t)) return 'Nails';
-    if (/brow|sourcil/.test(t)) return 'Brows';
-    if (/lip|levre|lèvre|rouge-a|gloss/.test(t)) return 'Lips';
-    if (/mascara|eye|liner|lash|shadow|yeux|kohl/.test(t)) return 'Eyes';
-    if (/blush|bronz|highlight|cheek|contour/.test(t)) return 'Cheeks';
-    if (/brush|sponge|applicator|pinceau|tool/.test(t)) return 'Tools';
-    if (/foundation|concealer|powder|primer|bb-cream|cc-cream|setting|fond-de-teint|poudre|face/.test(t)) return 'Face';
-    return '';
-  }
-  async function lookupProduct(code) {
-    if (!/^\d{8,14}$/.test(code)) return null;
-    if (Object.prototype.hasOwnProperty.call(lookupCache, code)) return lookupCache[code];
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const r = await fetch('https://world.openbeautyfacts.org/api/v2/product/' + encodeURIComponent(code) +
-        '.json?fields=product_name,brands,categories_tags,image_front_small_url', { signal: ctrl.signal });
-      if (!r.ok) { lookupCache[code] = null; return null; }
-      const j = await r.json();
-      const p = j && j.status === 1 ? j.product : null;
-      const brand = p ? String(p.brands || '').split(',')[0].trim() : '';
-      const product = p ? String(p.product_name || '').trim() : '';
-      if (!brand && !product) { lookupCache[code] = null; return null; }
-      const img = p.image_front_small_url || '';
-      const info = {
-        brand: brand, product: product,
-        category: guessCategory((p.categories_tags || []).join(' ') + ' ' + product),
-        image: /^https:\/\/[\w.-]+\.openbeautyfacts\.org\//.test(img) ? img : ''
-      };
-      lookupCache[code] = info;
-      return info;
-    } catch (e) {
-      return null; // offline or slow: don't remember, try again next time
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  function foundHtml(info, code) {
-    return '<div class="found">' +
-      '<div class="mini">' + (info.image ? '<img src="' + esc(info.image) + '" alt="">' : ICON.barcode) + '</div>' +
-      '<div style="min-width:0"><div style="font-weight:800;font-size:16px">' + esc(info.product || 'Unnamed product') + '</div>' +
-      '<div class="muted" style="font-weight:700">' + esc(info.brand) + '</div>' +
-      '<div class="muted" style="font-size:12px;font-weight:600;margin-top:2px">Barcode ' + esc(code) + '</div></div></div>';
-  }
-
-  // "Is this it?" step: always let the person confirm before we fill anything in
-  function confirmProduct(info, code) {
-    return new Promise((resolve) => {
-      const bg = document.createElement('div');
-      bg.className = 'sheet-bg';
-      document.getElementById('toast').classList.remove('show');
-      bg.innerHTML = '<div class="sheet pop" role="dialog" aria-modal="true" aria-labelledby="pTitle">' +
-        '<div class="eyebrow">We found a match</div>' +
-        '<h2 id="pTitle">Is this it?</h2>' + foundHtml(info, code) +
-        '<button class="btn" id="pYes">Yes, fill it in</button>' +
-        '<button class="btn secondary" id="pNo">No, I\'ll type it myself</button></div>';
-      document.body.appendChild(bg);
-      const done = (v) => { bg.remove(); resolve(v); };
-      bg.querySelector('#pYes').addEventListener('click', () => done(true));
-      bg.querySelector('#pNo').addEventListener('click', () => done(false));
-      bg.addEventListener('click', (e) => { if (e.target === bg) done(false); });
-      bg.querySelector('#pYes').focus();
     });
   }
 
@@ -1104,7 +1031,7 @@
                 '<span style="color:var(--text)"><span class="label">Barcode</span><b>' + esc(draft.barcode) + '</b></span></span>' +
                 '<button type="button" class="link-btn" id="bcRemove">Remove</button></div>'
             : '<button type="button" class="btn secondary scan-btn" id="scanBtn">' + ICON.barcode + 'Scan the barcode</button>' +
-              '<div class="hint-text">Optional. We fill in the brand when we know the product.</div>') +
+              '<div class="hint-text">Optional. Lets the app spot duplicates when you scan in a shop.</div>') +
           '<div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:14px;font-weight:800">Category <span class="req">*</span></div>' +
             '<div class="chips" role="group" aria-label="Category">' + CATEGORIES.map((c) => '<button type="button" class="chip" data-cat="' + c + '" aria-pressed="' + (draft.category === c) + '">' + c + '</button>').join('') + '</div></div>' +
           '<label class="field"><span>Brand <span class="req">*</span></span><input class="input" id="fBrand" list="brandList" autocomplete="off" value="' + esc(draft.brand) + '" placeholder="e.g. Rosé Studio"></label>' +
@@ -1156,18 +1083,7 @@
       readFields();
       draft.barcode = code;
       draw();
-      toast('Looking up this product…');
-      const info = await lookupProduct(code);
-      if (location.hash !== formHash) return;
-      if (!info) { toast('Barcode saved. Please type the brand yourself.'); return; }
-      const yes = await confirmProduct(info, code);
-      if (!yes || location.hash !== formHash) return;
-      readFields();
-      if (info.brand) draft.brand = info.brand;
-      if (info.product) draft.product = info.product;
-      if (!draft.category && info.category) draft.category = info.category;
-      draw();
-      toast('Filled in. Please add the shade yourself.');
+      toast('Barcode saved ✓');
     }
 
     function readFields() {
@@ -1233,7 +1149,7 @@
   }
 
   let checkQuery = '';
-  let checkScan = null; // { code, loading, info } after scanning a barcode in the store
+  let checkScan = null; // { code } after scanning a barcode in the store
   let pendingPrefill = null; // details to put in the Add item form
   function renderCheck() {
     function scanResults() {
@@ -1248,23 +1164,9 @@
           '<div class="stack" style="gap:8px">' + matches.map((m) => listItemHtml(m)).join('') + '</div></div>' +
           (similar.length ? '<h2 style="font-size:17px">Similar in your collection</h2><div class="stack" style="gap:8px">' + similar.map((m) => listItemHtml(m, colorFamily(m.color))).join('') + '</div>' : '');
       }
-      if (checkScan.loading) return head + '<div class="muted" style="font-weight:700;text-align:center;padding:24px 8px">Checking this barcode…</div>';
-      const info = checkScan.info;
-      const addBtn = '<button type="button" class="btn" id="addScanned">Add it to my collection</button>';
-      if (!info) {
-        return head + '<div class="banner ok pop">You don\'t have anything with this barcode yet.</div>' +
-          '<div class="muted" style="font-weight:600;line-height:1.4">Items you added without scanning won\'t show up here. To be sure, also type the brand in the search box above.</div>' + addBtn;
-      }
-      const brandKey = norm(info.brand);
-      const sameBrand = brandKey ? items.filter((it) => norm(it.brand) === brandKey && (!info.category || it.category === info.category)) : [];
-      return head + '<div class="banner ok pop">This exact product isn\'t in your collection yet.</div>' +
-        '<div class="stack" style="gap:8px"><div class="eyebrow">Is this it?</div>' + foundHtml(info, code) +
-        '<button type="button" class="link-btn" id="notIt" style="align-self:flex-start">No, that\'s not it</button></div>' +
-        (sameBrand.length
-          ? '<h2 style="font-size:17px">You already have ' + sameBrand.length + ' from ' + esc(info.brand) + '</h2>' +
-            '<div class="muted" style="font-weight:600;margin-top:-8px">Check the shades, in case one is very close.</div>' +
-            '<div class="stack" style="gap:8px">' + sameBrand.slice(0, 6).map((m) => listItemHtml(m)).join('') + '</div>'
-          : '') + addBtn;
+      return head + '<div class="banner ok pop">You don\'t have anything with this barcode yet.</div>' +
+        '<div class="muted" style="font-weight:600;line-height:1.4">Items you added without scanning won\'t show up here. To be sure, also type the brand in the search box above.</div>' +
+        '<button type="button" class="btn" id="addScanned">Add it to my collection</button>';
     }
     function results() {
       if (checkScan && !checkQuery.trim()) return scanResults();
@@ -1295,12 +1197,9 @@
       box.innerHTML = results();
       const clear = document.getElementById('clearScan');
       if (clear) clear.addEventListener('click', () => { checkScan = null; refresh(); });
-      const notIt = document.getElementById('notIt');
-      if (notIt) notIt.addEventListener('click', () => { checkScan.info = null; refresh(); });
       const add = document.getElementById('addScanned');
       if (add) add.addEventListener('click', () => {
-        const info = checkScan.info || {};
-        pendingPrefill = { barcode: checkScan.code, brand: info.brand || '', product: info.product || '', category: info.category || '' };
+        pendingPrefill = { barcode: checkScan.code };
         location.hash = '#/add';
       });
     }
@@ -1309,15 +1208,8 @@
       const code = await openScanner();
       if (!code || location.hash !== '#/check') return;
       checkQuery = ''; input.value = '';
-      const owned = items.some((it) => sameBarcode(it, code));
-      checkScan = { code: code, loading: !owned, info: null };
+      checkScan = { code: code };
       refresh();
-      if (owned) return;
-      const info = await lookupProduct(code);
-      if (!checkScan || checkScan.code !== code) return;
-      checkScan.info = info;
-      checkScan.loading = false;
-      if (location.hash === '#/check') refresh();
     });
     refresh();
     if (!checkQuery && !checkScan) input.focus();
