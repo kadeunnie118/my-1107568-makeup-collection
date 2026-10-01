@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Makeup Collection</title>
+<meta name="theme-color" content="#FFF5F7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Makeup">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+  :root {
+    --bg: #FFF5F7;
+    --surface: #FFE4EA;
+    --card: #FFFFFF;
+    --primary: #B83D62;
+    --primary-soft: #E8738F;
+    --accent: #FFB38A;
+    --accent-soft: #FFE3D2;
+    --success: #9ED9C3;
+    --success-soft: #DDF3EA;
+    --success-text: #1F4D3D;
+    --text: #3D2C3A;
+    --muted: #7A5A6E;
+    --line: #F3CAD5;
+    --radius: 20px;
+    --shadow: 0 4px 16px rgba(232, 115, 143, 0.15);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Nunito', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { min-height: 100vh; }
+  button, input, select, textarea { font-family: inherit; font-size: 16px; color: var(--text); }
+  button { cursor: pointer; }
+  .app { max-width: 560px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.3px; }
+  h2 { margin: 0; font-size: 18px; font-weight: 800; }
+  .muted { color: var(--muted); }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .between { justify-content: space-between; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .pill { background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; color: #8E2A4A; border: none; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 999px; background: var(--card); border: none; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); flex-shrink: 0; }
+  .search { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 999px; padding: 0 16px; height: 50px; box-shadow: var(--shadow); flex-grow: 1; }
+  .search input { border: none; outline: none; background: transparent; flex-grow: 1; min-width: 0; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { border: none; border-radius: 999px; padding: 0 16px; height: 40px; background: var(--surface); font-size: 14px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .chip[aria-pressed="true"] { background: var(--text); color: #fff; }
+  .tip { background: var(--accent-soft); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; line-height: 1.35; }
+  .tip .dot { width: 40px; height: 40px; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  @media (min-width: 500px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .card { background: var(--card); border-radius: var(--radius); padding: 10px; box-shadow: 0 4px 16px rgba(232, 115, 143, 0.12); border: none; text-align: left; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .thumb { aspect-ratio: 1 / 1; width: 100%; border-radius: 14px; background: var(--surface); object-fit: cover; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .card .name { font-size: 15px; font-weight: 800; line-height: 1.25; }
+  .card .brand { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .swatch-row { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .swatch { width: 14px; height: 14px; border-radius: 999px; border: 2px solid #fff; box-shadow: 0 0 0 1px #E8C9D2; flex-shrink: 0; }
+  .empty { text-align: center; padding: 48px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .empty .big { width: 96px; height: 96px; border-radius: 999px; background: var(--surface); display: flex; align-items: center; justify-content: center; }
+  .btn { height: 56px; border: none; border-radius: 999px; background: var(--primary); color: #fff; font-size: 17px; font-weight: 800; padding: 0 24px; box-shadow: 0 8px 20px rgba(184, 61, 98, 0.3); width: 100%; }
+  .btn.secondary { background: var(--card); color: var(--text); border: 2px solid var(--line); box-shadow: none; }
+  .btn.small { height: 44px; font-size: 15px; width: auto; }
+  .btn:disabled { opacity: 0.5; }
+  label.field { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 800; }
+  .req { color: var(--primary); }
+  .opt { font-weight: 600; color: var(--muted); }
+  .input { height: 50px; border: 2px solid var(--line); border-radius: 16px; padding: 0 14px; background: var(--card); font-weight: 600; outline: none; width: 100%; }
+  .input:focus { border-color: var(--primary-soft); }
+  textarea.input { height: 96px; padding: 12px 14px; resize: vertical; }
+  .photo-box { background: var(--surface); border-radius: 24px; min-height: 200px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: none; width: 100%; padding: 0; }
+  .photo-box img { width: 100%; max-height: 320px; object-fit: cover; display: block; }
+  .photo-box .hint { display: flex; flex-direction: column; align-items: center; gap: 8px; font-weight: 800; color: #8E2A4A; padding: 40px 16px; }
+  .photo-box .retake { position: absolute; right: 12px; bottom: 12px; background: #fff; border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 700; }
+  .colors { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .color-opt { width: 40px; height: 40px; border-radius: 999px; border: 3px solid #fff; box-shadow: 0 0 0 1px #E8C9D2; padding: 0; }
+  .color-opt[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--primary); }
+  .color-custom { width: 40px; height: 40px; border-radius: 999px; overflow: hidden; border: 2px dashed #E8A9BA; position: relative; display: flex; align-items: center; justify-content: center; }
+  .color-custom input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .banner { border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .banner.warn { background: var(--card); border: 2px solid #F3B4C4; box-shadow: 0 6px 20px rgba(232, 115, 143, 0.18); }
+  .banner.ok { background: var(--success-soft); color: var(--success-text); font-weight: 700; }
+  .eyebrow { font-size: 13px; font-weight: 800; color: #8E2A4A; text-transform: uppercase; letter-spacing: 0.6px; }
+  .list-item { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 18px; padding: 10px 14px; border: none; text-align: left; width: 100%; }
+  .list-item .mini { width: 48px; height: 48px; border-radius: 12px; background: var(--surface); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .list-item .mini img { width: 100%; height: 100%; object-fit: cover; }
+  .tag { font-size: 12px; font-weight: 800; background: var(--surface); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+  nav.bottom { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); width: calc(100% - 32px); max-width: 528px; height: 72px; background: #fff; border-radius: 999px; box-shadow: 0 8px 24px rgba(184, 61, 98, 0.18); display: flex; align-items: center; justify-content: space-around; z-index: 10; }
+  nav.bottom a { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: 12px; font-weight: 800; min-width: 72px; padding: 6px 0; }
+  nav.bottom a.active { color: var(--primary); }
+  nav.bottom a.center { width: 64px; min-width: 64px; height: 64px; border-radius: 999px; background: var(--primary); color: #fff; justify-content: center; margin-top: -36px; box-shadow: 0 8px 20px rgba(184, 61, 98, 0.35); }
+  .toast { position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(200px); background: var(--text); color: #fff; padding: 12px 20px; border-radius: 999px; font-weight: 700; transition: transform 0.3s cubic-bezier(.2,1.4,.4,1); z-index: 30; max-width: calc(100% - 32px); text-align: center; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .detail-photo { width: 100%; border-radius: 24px; background: var(--surface); aspect-ratio: 1 / 1; object-fit: cover; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .kv { background: var(--card); border-radius: var(--radius); padding: 4px 16px; }
+  .kv div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #FBE3EA; font-weight: 600; }
+  .kv div:last-child { border-bottom: none; }
+  .kv span:first-child { color: var(--muted); }
+  .danger { color: #A3243F; background: none; border: none; font-weight: 800; padding: 12px; }
+  .sheet-bg { position: fixed; inset: 0; background: rgba(61, 44, 58, 0.35); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+  .sheet { background: var(--bg); width: 100%; max-width: 560px; border-radius: 28px 28px 0 0; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; }
+  .pop { animation: pop 0.35s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<main class="app" id="app" aria-live="polite"></main>
+<nav class="bottom" id="nav" aria-label="Main">
+  <a href="#/" data-nav="home">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+    Collection</a>
+  <a href="#/check" data-nav="check" class="center" aria-label="Do I already have this?">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+  </a>
+  <a href="#/add" data-nav="add">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Add item</a>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+<input type="file" id="importFile" accept="application/json" class="sr-only" aria-hidden="true" tabindex="-1">
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Settings ----------
+  const CATEGORIES = ['Lips', 'Face', 'Eyes', 'Cheeks', 'Brows', 'Nails', 'Tools', 'Other'];
+  const CATEGORY_NOUN = { Lips: 'lip products', Face: 'face products', Eyes: 'eye products', Cheeks: 'cheek products', Brows: 'brow products', Nails: 'nail polishes', Tools: 'tools', Other: 'items' };
+  const QUICK_COLORS = ['#F2C9B8', '#C98A7D', '#A86F57', '#6E4A3F', '#F29A9E', '#E35D7A', '#B4232F', '#7B2340', '#F08A5D', '#9C6ADE', '#2F2A2E', '#E9D3C4'];
+
+  // ---------- Storage (IndexedDB, saved on this device) ----------
+  const DB_NAME = 'makeup-collection';
+  const STORE = 'items';
+  let dbPromise = null;
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: 'id' });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+  async function dbAll() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function dbPut(item) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(item);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function dbDelete(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  let items = [];
+  async function loadItems() {
+    try { items = await dbAll(); } catch (e) { items = []; toast('Could not open storage on this device'); }
+    items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+  async function saveItem(item) {
+    await dbPut(item);
+    const i = items.findIndex((x) => x.id === item.id);
+    if (i >= 0) items[i] = item; else items.unshift(item);
+  }
+  async function removeItem(id) {
+    await dbDelete(id);
+    items = items.filter((x) => x.id !== id);
+  }
+
+  // ---------- Helpers ----------
+  const $app = document.getElementById('app');
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  let toastTimer = null;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  // Colour family, used for "similar" items and tips
+  function hexToHsl(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return { h, s, l };
+  }
+  function colorFamily(hex) {
+    const c = hexToHsl(hex);
+    if (!c) return '';
+    const { h, s, l } = c;
+    if (l < 0.18) return 'black';
+    if (l > 0.92) return 'white';
+    if (s < 0.12) return 'grey';
+    const warm = h < 45 || h >= 340;
+    if (warm && s < 0.55 && l >= 0.45 && l <= 0.88) return 'nude';
+    if (h >= 10 && h < 45 && l > 0.75 && l <= 0.92) return 'nude';
+    if (h >= 5 && h < 45 && l < 0.45 && s < 0.6) return 'brown';
+    if (h >= 345 || h < 12) return l > 0.6 ? 'pink' : (l < 0.35 ? 'berry' : 'red');
+    if (h < 40) return 'coral';
+    if (h < 70) return 'gold';
+    if (h < 170) return 'green';
+    if (h < 250) return 'blue';
+    if (h < 290) return 'purple';
+    if (h < 345) return l < 0.4 ? 'berry' : 'pink';
+    return '';
+  }
+
+  function photoHtml(item, cls) {
+    if (item.photo) return '<img src="' + esc(item.photo) + '" alt="">';
+    const color = item.color || '#E8C9D2';
+    return '<svg width="60%" height="60%" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="24" fill="' + esc(color) + '"/></svg>';
+  }
+
+  // Resize a photo so it does not fill up the phone's storage
+  function readPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const max = 900;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read photo')); };
+      img.src = url;
+    });
+  }
+
+  function haystack(item) {
+    return norm([item.brand, item.product, item.shade, item.category, CATEGORY_NOUN[item.category], colorFamily(item.color), item.notes].join(' '));
+  }
+  function searchItems(query) {
+    const tokens = norm(query).split(' ').filter(Boolean);
+    if (!tokens.length) return [];
+    return items.filter((it) => {
+      const hay = haystack(it);
+      return tokens.every((t) => hay.includes(t) || (t.endsWith('s') && hay.includes(t.slice(0, -1))));
+    });
+  }
+  function findDuplicates(draft) {
+    const b = norm(draft.brand), s = norm(draft.shade), p = norm(draft.product);
+    if (!b) return [];
+    return items.filter((it) => it.id !== draft.id && norm(it.brand) === b && it.category === draft.category &&
+      ((s && norm(it.shade) === s) || (!s && p && norm(it.product) === p)));
+  }
+  function findSimilar(base, exclude) {
+    const fam = colorFamily(base.color);
+    if (!fam) return [];
+    const ex = new Set(exclude.map((x) => x.id));
+    return items.filter((it) => !ex.has(it.id) && it.id !== base.id && it.category === base.category && colorFamily(it.color) === fam);
+  }
+  function bestTip() {
+    const groups = {};
+    items.forEach((it) => {
+      const fam = colorFamily(it.color);
+      if (!fam || !it.category) return;
+      const key = fam + '|' + it.category;
+      groups[key] = (groups[key] || 0) + 1;
+    });
+    let best = null;
+    Object.keys(groups).forEach((k) => { if (groups[k] >= 3 && (!best || groups[k] > groups[best])) best = k; });
+    if (!best) return null;
+    const [fam, cat] = best.split('|');
+    return 'You have <b>' + groups[best] + ' ' + esc(fam) + ' ' + esc(CATEGORY_NOUN[cat] || 'items') + '</b> already. Maybe try a new color next time?';
+  }
+
+  const ICON = {
+    back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>',
+    search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A5A6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>',
+    camera: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    sparkle: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3D2C3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>',
+    lipstick: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#B83D62" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10V5l6-2v7"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="6" y="14" width="12" height="7" rx="1.5"/></svg>',
+    more: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>'
+  };
+
+  // ---------- Screens ----------
+  let filter = 'All';
+  let homeQuery = '';
+
+  function renderHome() {
+    const tip = bestTip();
+    const filtered = items.filter((it) => filter === 'All' || it.category === filter)
+      .filter((it) => !homeQuery || searchItems(homeQuery).includes(it));
+    const usedCats = CATEGORIES.filter((c) => items.some((it) => it.category === c));
+    $app.innerHTML =
+      '<div class="stack">' +
+        '<div class="row between">' +
+          '<div><div class="muted" style="font-weight:600">Hello again</div><h1>My collection</h1></div>' +
+          '<div class="row" style="gap:8px"><span class="pill">' + items.length + (items.length === 1 ? ' item' : ' items') + '</span>' +
+          '<button class="icon-btn" id="moreBtn" aria-label="Backup options">' + ICON.more + '</button></div>' +
+        '</div>' +
+        (items.length ? (
+          '<label class="search">' + ICON.search + '<input type="search" id="homeSearch" placeholder="Search your makeup" aria-label="Search your makeup" value="' + esc(homeQuery) + '"></label>' +
+          '<div class="chips" role="group" aria-label="Filter by category">' +
+            ['All'].concat(usedCats).map((c) => '<button class="chip" data-filter="' + esc(c) + '" aria-pressed="' + (filter === c) + '">' + esc(c) + '</button>').join('') +
+          '</div>' +
+          (tip ? '<div class="tip"><div class="dot">' + ICON.sparkle + '</div><div>' + tip + '</div></div>' : '') +
+          (filtered.length ? '<div class="grid">' + filtered.map(cardHtml).join('') + '</div>'
+            : '<div class="empty"><div class="muted" style="font-weight:700">Nothing matches that yet.</div></div>')
+        ) : (
+          '<div class="empty pop"><div class="big">' + ICON.lipstick + '</div>' +
+          '<h2>Your collection is waiting!</h2>' +
+          '<div class="muted" style="font-weight:600;max-width:280px">Add your first item. A photo plus the brand is all you need.</div>' +
+          '<a href="#/add" class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;max-width:280px">Add my first item</a></div>'
+        )) +
+      '</div>';
+
+    const s = document.getElementById('homeSearch');
+    if (s) s.addEventListener('input', (e) => {
+      homeQuery = e.target.value;
+      const pos = e.target.selectionStart;
+      renderHome();
+      const s2 = document.getElementById('homeSearch');
+      s2.focus(); s2.setSelectionRange(pos, pos);
+    });
+    $app.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.filter; renderHome(); }));
+    document.getElementById('moreBtn').addEventListener('click', openBackupSheet);
+  }
+
+  function cardHtml(it) {
+    return '<a class="card" href="#/item/' + esc(it.id) + '" style="text-decoration:none;color:inherit">' +
+      '<div class="thumb">' + photoHtml(it) + '</div>' +
+      '<div style="padding:0 4px 4px">' +
+        '<div class="name">' + esc(it.product || it.category) + '</div>' +
+        '<div class="brand">' + esc(it.brand) + '</div>' +
+        (it.shade || it.color ? '<div class="swatch-row" style="margin-top:4px">' + (it.color ? '<span class="swatch" style="background:' + esc(it.color) + '"></span>' : '') + esc(it.shade || '') + '</div>' : '') +
+      '</div></a>';
+  }
+
+  function renderForm(existing) {
+    const draft = existing ? Object.assign({}, existing) : { id: uid(), category: '', brand: '', product: '', shade: '', color: '', notes: '', photo: '' };
+    const brands = Array.from(new Set(items.map((i) => i.brand).filter(Boolean))).sort();
+    const products = Array.from(new Set(items.map((i) => i.product).filter(Boolean))).sort();
+
+    function draw() {
+      $app.innerHTML =
+        '<div class="stack">' +
+          '<div class="row"><a href="' + (existing ? '#/item/' + esc(draft.id) : '#/') + '" class="icon-btn" aria-label="Back" style="color:inherit">' + ICON.back + '</a>' +
+          '<h1 style="font-size:24px">' + (existing ? 'Edit item' : 'Add an item') + '</h1></div>' +
+          '<button type="button" class="photo-box" id="photoBtn" aria-label="' + (draft.photo ? 'Retake photo' : 'Take or choose a photo') + '">' +
+            (draft.photo ? '<img src="' + esc(draft.photo) + '" alt="Your photo"><span class="retake">Retake</span>'
+              : '<span class="hint">' + ICON.camera + 'Take a photo<span class="muted" style="font-weight:600;font-size:14px">or choose one from your phone</span></span>') +
+          '</button>' +
+          '<input type="file" id="photoInput" accept="image/*" capture="environment" class="sr-only" tabindex="-1" aria-hidden="true">' +
+          '<div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:14px;font-weight:800">Category <span class="req">*</span></div>' +
+            '<div class="chips" role="group" aria-label="Category">' + CATEGORIES.map((c) => '<button type="button" class="chip" data-cat="' + c + '" aria-pressed="' + (draft.category === c) + '">' + c + '</button>').join('') + '</div></div>' +
+          '<label class="field"><span>Brand <span class="req">*</span></span><input class="input" id="fBrand" list="brandList" autocomplete="off" value="' + esc(draft.brand) + '" placeholder="e.g. Rosé Studio"></label>' +
+          '<datalist id="brandList">' + brands.map((b) => '<option value="' + esc(b) + '">').join('') + '</datalist>' +
+          '<label class="field"><span>Product <span class="opt">(optional)</span></span><input class="input" id="fProduct" list="productList" autocomplete="off" value="' + esc(draft.product) + '" placeholder="e.g. Satin Lipstick"></label>' +
+          '<datalist id="productList">' + products.map((b) => '<option value="' + esc(b) + '">').join('') + '</datalist>' +
+          '<label class="field"><span>Shade name or number <span class="opt">(recommended)</span></span><input class="input" id="fShade" autocomplete="off" value="' + esc(draft.shade) + '" placeholder="e.g. 102 Nude Petal"></label>' +
+          '<div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:14px;font-weight:800">Color <span class="opt">(helps find similar items)</span></div>' +
+            '<div class="colors" role="group" aria-label="Color">' +
+              QUICK_COLORS.map((c) => '<button type="button" class="color-opt" data-color="' + c + '" aria-label="Color ' + c + '" aria-pressed="' + (draft.color.toLowerCase() === c.toLowerCase()) + '" style="background:' + c + '"></button>').join('') +
+              '<label class="color-custom" aria-label="Pick another color" style="' + (draft.color && !QUICK_COLORS.some((c) => c.toLowerCase() === draft.color.toLowerCase()) ? 'background:' + esc(draft.color) + ';border-style:solid' : '') + '">+<input type="color" id="fColor" value="' + esc(draft.color || '#C98A7D') + '"></label>' +
+            '</div></div>' +
+          '<label class="field"><span>Notes <span class="opt">(optional)</span></span><textarea class="input" id="fNotes" placeholder="Where you bought it, price, expiry…">' + esc(draft.notes) + '</textarea></label>' +
+          '<div id="formError" class="muted" style="color:#A3243F;font-weight:700;display:none"></div>' +
+          '<button type="button" class="btn" id="saveBtn">' + (existing ? 'Save changes' : 'Save to my collection') + '</button>' +
+        '</div>';
+
+      const photoInput = document.getElementById('photoInput');
+      document.getElementById('photoBtn').addEventListener('click', () => photoInput.click());
+      photoInput.addEventListener('change', async () => {
+        const f = photoInput.files && photoInput.files[0];
+        if (!f) return;
+        try { readFields(); draft.photo = await readPhoto(f); draw(); } catch (e) { toast('Sorry, that photo could not be read'); }
+      });
+      $app.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { readFields(); draft.category = b.dataset.cat; draw(); }));
+      $app.querySelectorAll('[data-color]').forEach((b) => b.addEventListener('click', () => {
+        readFields();
+        draft.color = draft.color.toLowerCase() === b.dataset.color.toLowerCase() ? '' : b.dataset.color;
+        draw();
+      }));
+      document.getElementById('fColor').addEventListener('change', (e) => { readFields(); draft.color = e.target.value; draw(); });
+      document.getElementById('saveBtn').addEventListener('click', onSave);
+    }
+
+    function readFields() {
+      draft.brand = document.getElementById('fBrand').value.trim();
+      draft.product = document.getElementById('fProduct').value.trim();
+      draft.shade = document.getElementById('fShade').value.trim();
+      draft.notes = document.getElementById('fNotes').value.trim();
+    }
+
+    async function onSave() {
+      readFields();
+      const err = document.getElementById('formError');
+      if (!draft.category || !draft.brand) {
+        err.textContent = !draft.category ? 'Please choose a category.' : 'Please add the brand.';
+        err.style.display = 'block';
+        return;
+      }
+      const dups = findDuplicates(draft);
+      if (!existing && dups.length) {
+        const ok = await confirmDuplicate(dups[0]);
+        if (!ok) return;
+      }
+      draft.updatedAt = Date.now();
+      if (!draft.createdAt) draft.createdAt = Date.now();
+      try {
+        await saveItem(draft);
+        toast(existing ? 'Changes saved' : 'Added to your collection ✨');
+        location.hash = existing ? '#/item/' + draft.id : '#/';
+      } catch (e) {
+        toast('Could not save. Your phone may be out of space.');
+      }
+    }
+
+    draw();
+  }
+
+  function confirmDuplicate(dup) {
+    return new Promise((resolve) => {
+      const bg = document.createElement('div');
+      bg.className = 'sheet-bg';
+      bg.innerHTML = '<div class="sheet pop" role="dialog" aria-modal="true" aria-labelledby="dupTitle">' +
+        '<div class="eyebrow">Wait a second</div>' +
+        '<h2 id="dupTitle">Looks like you already own this one</h2>' +
+        listItemHtml(dup) +
+        '<button class="btn" id="dupNo">Don\'t add it</button>' +
+        '<button class="btn secondary" id="dupYes">Add anyway (it\'s a backup)</button></div>';
+      document.body.appendChild(bg);
+      const done = (v) => { bg.remove(); resolve(v); };
+      bg.querySelector('#dupNo').addEventListener('click', () => done(false));
+      bg.querySelector('#dupYes').addEventListener('click', () => done(true));
+      bg.addEventListener('click', (e) => { if (e.target === bg) done(false); });
+      bg.querySelector('#dupNo').focus();
+    });
+  }
+
+  function listItemHtml(it, tag) {
+    return '<a class="list-item" href="#/item/' + esc(it.id) + '" style="text-decoration:none;color:inherit">' +
+      '<div class="mini">' + photoHtml(it) + '</div>' +
+      '<div style="flex-grow:1;min-width:0"><div style="font-weight:800">' + esc(it.product || it.category) + '</div>' +
+      '<div class="muted" style="font-size:13px;font-weight:600">' + esc([it.brand, it.shade].filter(Boolean).join(' · ')) + '</div></div>' +
+      (it.color ? '<span class="swatch" style="width:22px;height:22px;background:' + esc(it.color) + '"></span>' : '') +
+      (tag ? '<span class="tag">' + esc(tag) + '</span>' : '') + '</a>';
+  }
+
+  let checkQuery = '';
+  function renderCheck() {
+    function results() {
+      if (!checkQuery.trim()) {
+        return '<div class="muted" style="font-weight:600;text-align:center;padding:24px 8px">Type what you\'re about to buy, like <b>red lipstick</b> or a brand name.</div>';
+      }
+      const matches = searchItems(checkQuery);
+      if (!matches.length) {
+        return '<div class="banner ok pop">Nothing like this in your collection yet. Treat yourself?</div>';
+      }
+      const similar = findSimilar(matches[0], matches).slice(0, 6);
+      return '<div class="banner warn pop"><div class="eyebrow">Found in your collection</div>' +
+        '<h2 style="font-size:20px">' + (matches.length === 1 ? 'Looks like you already own this one!' : 'You already own ' + matches.length + ' of these!') + '</h2>' +
+        '<div class="stack" style="gap:8px">' + matches.slice(0, 8).map((m) => listItemHtml(m)).join('') + '</div></div>' +
+        (similar.length ? '<h2 style="font-size:17px">Similar in your collection</h2><div class="stack" style="gap:8px">' + similar.map((m) => listItemHtml(m, colorFamily(m.color))).join('') + '</div>' : '');
+    }
+    $app.innerHTML =
+      '<div class="stack">' +
+        '<div class="row"><a href="#/" class="icon-btn" aria-label="Back to collection" style="color:inherit">' + ICON.back + '</a><h1 style="font-size:24px">Do I already have this?</h1></div>' +
+        '<label class="search">' + ICON.search + '<input type="search" id="checkInput" placeholder="e.g. nude lipstick" aria-label="What are you thinking of buying?" value="' + esc(checkQuery) + '"></label>' +
+        '<div id="checkResults" class="stack">' + results() + '</div>' +
+      '</div>';
+    const input = document.getElementById('checkInput');
+    input.addEventListener('input', () => { checkQuery = input.value; document.getElementById('checkResults').innerHTML = results(); });
+    if (!checkQuery) input.focus();
+  }
+
+  function renderDetail(id) {
+    const it = items.find((x) => x.id === id);
+    if (!it) { location.hash = '#/'; return; }
+    const fam = colorFamily(it.color);
+    const similar = findSimilar(it, []).slice(0, 4);
+    $app.innerHTML =
+      '<div class="stack">' +
+        '<div class="row between"><a href="#/" class="icon-btn" aria-label="Back to collection" style="color:inherit">' + ICON.back + '</a>' +
+        '<a href="#/edit/' + esc(it.id) + '" class="btn secondary small" style="display:flex;align-items:center;text-decoration:none">Edit</a></div>' +
+        '<div class="detail-photo">' + photoHtml(it) + '</div>' +
+        '<div><h1 style="font-size:24px">' + esc(it.product || it.category) + '</h1><div class="muted" style="font-weight:700;font-size:16px">' + esc(it.brand) + '</div></div>' +
+        '<div class="kv">' +
+          '<div><span>Category</span><span>' + esc(it.category) + '</span></div>' +
+          (it.shade ? '<div><span>Shade</span><span>' + esc(it.shade) + '</span></div>' : '') +
+          (it.color ? '<div><span>Color</span><span class="row" style="gap:8px"><span class="swatch" style="width:18px;height:18px;background:' + esc(it.color) + '"></span>' + esc(fam) + '</span></div>' : '') +
+          '<div><span>Added</span><span>' + new Date(it.createdAt).toLocaleDateString() + '</span></div>' +
+          (it.notes ? '<div style="flex-direction:column;gap:4px"><span>Notes</span><span style="white-space:pre-line">' + esc(it.notes) + '</span></div>' : '') +
+        '</div>' +
+        (similar.length ? '<h2 style="font-size:17px">Similar ' + esc(fam) + ' ' + esc(CATEGORY_NOUN[it.category] || 'items') + '</h2><div class="stack" style="gap:8px">' + similar.map((m) => listItemHtml(m)).join('') + '</div>' : '') +
+        '<button class="danger" id="delBtn">Remove from collection</button>' +
+      '</div>';
+    document.getElementById('delBtn').addEventListener('click', async () => {
+      if (!confirm('Remove this item from your collection?')) return;
+      await removeItem(it.id);
+      toast('Removed');
+      location.hash = '#/';
+    });
+  }
+
+  // ---------- Backup (because items live only on this device) ----------
+  function openBackupSheet() {
+    const bg = document.createElement('div');
+    bg.className = 'sheet-bg';
+    bg.innerHTML = '<div class="sheet pop" role="dialog" aria-modal="true" aria-labelledby="bkTitle">' +
+      '<h2 id="bkTitle">Back up your collection</h2>' +
+      '<div class="muted" style="font-weight:600">Your items are saved only on this phone. Save a backup file now and then, so you never lose them.</div>' +
+      '<button class="btn" id="bkExport">Save backup file</button>' +
+      '<button class="btn secondary" id="bkImport">Restore from a backup</button>' +
+      '<button class="btn secondary" id="bkClose">Close</button></div>';
+    document.body.appendChild(bg);
+    const close = () => bg.remove();
+    bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+    bg.querySelector('#bkClose').addEventListener('click', close);
+    bg.querySelector('#bkExport').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify({ app: 'makeup-collection', version: 1, exportedAt: new Date().toISOString(), items: items }, null, 0)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'makeup-collection-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast('Backup saved');
+      close();
+    });
+    bg.querySelector('#bkImport').addEventListener('click', () => { close(); document.getElementById('importFile').click(); });
+  }
+  document.getElementById('importFile').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      const list = Array.isArray(data.items) ? data.items : [];
+      let added = 0;
+      for (const raw of list) {
+        if (!raw || typeof raw !== 'object' || !raw.id || !raw.brand) continue;
+        const clean = {
+          id: String(raw.id), category: CATEGORIES.includes(raw.category) ? raw.category : 'Other',
+          brand: String(raw.brand), product: String(raw.product || ''), shade: String(raw.shade || ''),
+          color: /^#[0-9a-f]{6}$/i.test(raw.color || '') ? raw.color : '', notes: String(raw.notes || ''),
+          photo: /^data:image\/(jpeg|png|webp);base64,/.test(raw.photo || '') ? raw.photo : '',
+          createdAt: Number(raw.createdAt) || Date.now(), updatedAt: Date.now()
+        };
+        await saveItem(clean); added++;
+      }
+      items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      toast('Restored ' + added + ' items');
+      route();
+    } catch (err) {
+      toast('That file is not a collection backup');
+    }
+  });
+
+  // ---------- Navigation ----------
+  function route() {
+    const h = location.hash.replace(/^#/, '') || '/';
+    const parts = h.split('/').filter(Boolean);
+    let nav = 'home';
+    window.scrollTo(0, 0);
+    if (parts[0] === 'add') { nav = 'add'; renderForm(null); }
+    else if (parts[0] === 'edit') { const it = items.find((x) => x.id === parts[1]); if (it) renderForm(it); else location.hash = '#/'; }
+    else if (parts[0] === 'check') { nav = 'check'; renderCheck(); }
+    else if (parts[0] === 'item') { renderDetail(parts[1]); }
+    else renderHome();
+    document.querySelectorAll('[data-nav]').forEach((a) => {
+      a.classList.toggle('active', a.dataset.nav === nav);
+      if (a.dataset.nav === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('hashchange', route);
+
+  loadItems().then(route);
+})();
+</script>
+</body>
+</html>
