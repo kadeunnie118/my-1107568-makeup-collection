@@ -42,7 +42,7 @@
   .row { display: flex; align-items: center; gap: 12px; }
   .between { justify-content: space-between; }
   .stack { display: flex; flex-direction: column; gap: 16px; }
-  .pill { background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; color: #8E2A4A; border: none; }
+  .pill { white-space: nowrap; background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; color: #8E2A4A; border: none; }
   .icon-btn { width: 44px; height: 44px; border-radius: 999px; background: var(--card); border: none; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); flex-shrink: 0; }
   .search { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 999px; padding: 0 16px; height: 50px; box-shadow: var(--shadow); flex-grow: 1; }
   .search input { border: none; outline: none; background: transparent; flex-grow: 1; min-width: 0; }
@@ -198,6 +198,15 @@
   }
 
   let items = [];
+  async function dbClear() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
   async function loadItems() {
     try { items = await dbAll(); } catch (e) { items = []; toast('Could not open storage on this device'); }
     items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -206,10 +215,18 @@
     await dbPut(item);
     const i = items.findIndex((x) => x.id === item.id);
     if (i >= 0) items[i] = item; else items.unshift(item);
+    scheduleSync();
   }
   async function removeItem(id) {
+    const old = items.find((x) => x.id === id);
     await dbDelete(id);
     items = items.filter((x) => x.id !== id);
+    if (CLOUD && user) {
+      const meta = readMeta();
+      meta.pendingDeletes.push({ id: id, photoPath: (old && old.photoPath) || '' });
+      writeMeta(meta);
+      scheduleSync();
+    }
   }
 
   // ---------- Helpers ----------
@@ -338,6 +355,7 @@
     sparkle: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3D2C3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>',
     lipstick: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#B83D62" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10V5l6-2v7"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="6" y="14" width="12" height="7" rx="1.5"/></svg>',
     more: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',
+    user: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
     barcode: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>'
   };
 
@@ -565,6 +583,446 @@
     });
   }
 
+  // ---------- Accounts & online saving (optional) ----------
+  // Fill these two in from Supabase → Project Settings → API Keys.
+  // The publishable key is meant to be public: the database rules (row level security)
+  // make sure each person can only see their own items and photos.
+  const SUPABASE_URL = '';
+  const SUPABASE_KEY = '';
+  const CLOUD = !!(SUPABASE_URL && SUPABASE_KEY);
+  const SUPABASE_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+  let user = null;
+  let syncState = 'idle'; // idle | syncing | ok | offline | error
+  let currentSync = null, syncAgain = false, syncTimer = null, lastSyncTry = 0;
+  let accountDraw = null; // redraws the account sheet when it is open
+  let sbPromise = null;
+
+  function getSb() {
+    if (!sbPromise) {
+      sbPromise = import(SUPABASE_LIB)
+        .then((lib) => lib.createClient(SUPABASE_URL, SUPABASE_KEY, {
+          auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        }))
+        .catch((e) => { sbPromise = null; throw e; });
+    }
+    return sbPromise;
+  }
+
+  // Small notes kept on this device: deletions that still need to reach the cloud
+  const META_KEY = 'makeup-collection-sync';
+  function readMeta() {
+    try {
+      const m = JSON.parse(localStorage.getItem(META_KEY) || '{}');
+      return { pendingDeletes: Array.isArray(m.pendingDeletes) ? m.pendingDeletes : [], lastSync: Number(m.lastSync) || 0 };
+    } catch (e) { return { pendingDeletes: [], lastSync: 0 }; }
+  }
+  function writeMeta(m) { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch (e) { /* storage blocked */ } }
+  function hasSavedSession() {
+    try {
+      const ref = new URL(SUPABASE_URL).hostname.split('.')[0];
+      return !!localStorage.getItem('sb-' + ref + '-auth-token');
+    } catch (e) { return false; }
+  }
+
+  // Only load the sign-in code for people who have signed in before (or just tapped an email link)
+  async function initCloud() {
+    if (!CLOUD) return;
+    const fromEmailLink = /[?&]code=/.test(location.search);
+    if (!hasSavedSession() && !fromEmailLink) return;
+    try {
+      await startAuth();
+    } catch (e) {
+      setSyncState('offline');
+    }
+    if (fromEmailLink) history.replaceState(null, '', location.pathname + location.hash);
+  }
+  let authStarted = false;
+  async function startAuth() {
+    const c = await getSb();
+    if (!authStarted) {
+      authStarted = true;
+      c.auth.onAuthStateChange((event, session) => { setTimeout(() => onSession(session), 0); });
+      const res = await c.auth.getSession();
+      onSession(res.data && res.data.session);
+    }
+    return c;
+  }
+  function onSession(session) {
+    const next = session && session.user ? session.user : null;
+    const changed = (next ? next.id : null) !== (user ? user.id : null);
+    user = next;
+    if (!changed) return;
+    if (user) scheduleSync(0); else setSyncState('idle');
+    updateSyncLabel();
+    if (accountDraw) accountDraw();
+    refreshView();
+  }
+
+  function syncText() {
+    if (!CLOUD || !user) return 'Hello again';
+    return { idle: 'Signed in', syncing: 'Saving online…', ok: 'Saved online ✓', offline: 'Offline · saved on this phone', error: 'Not saved online yet' }[syncState];
+  }
+  function setSyncState(s) {
+    syncState = s;
+    updateSyncLabel();
+    if (accountDraw) accountDraw();
+  }
+  function updateSyncLabel() {
+    const el = document.getElementById('syncLabel');
+    if (el) el.textContent = syncText();
+  }
+  // Redraw the screen after new items arrive, unless the person is typing
+  function refreshView() {
+    const a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    const h = location.hash.replace(/^#/, '') || '/';
+    if (h === '/' || h.indexOf('/item/') === 0) route(true);
+  }
+
+  function scheduleSync(delay) {
+    if (!CLOUD || !user) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(sync, delay == null ? 800 : delay);
+  }
+  function sync() {
+    if (!CLOUD || !user) return Promise.resolve();
+    if (currentSync) { syncAgain = true; return currentSync; }
+    lastSyncTry = Date.now();
+    currentSync = runSync().finally(() => {
+      currentSync = null;
+      if (syncAgain) { syncAgain = false; sync(); }
+    });
+    return currentSync;
+  }
+
+  function toRow(it, uid, photoPath) {
+    return {
+      user_id: uid, id: String(it.id).slice(0, 64),
+      category: CATEGORIES.includes(it.category) ? it.category : 'Other',
+      brand: String(it.brand || '').slice(0, 200), product: String(it.product || '').slice(0, 200),
+      shade: String(it.shade || '').slice(0, 200), color: /^#[0-9a-f]{6}$/i.test(it.color || '') ? it.color : '',
+      notes: String(it.notes || '').slice(0, 2000), barcode: String(it.barcode || '').slice(0, 64),
+      photo_path: photoPath, created_at: Number(it.createdAt) || Date.now(), updated_at: Number(it.updatedAt) || Date.now(),
+      deleted: false
+    };
+  }
+  function fromRow(r, local) {
+    return {
+      id: r.id, category: CATEGORIES.includes(r.category) ? r.category : 'Other',
+      brand: r.brand || '', product: r.product || '', shade: r.shade || '',
+      color: /^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : '', notes: r.notes || '', barcode: r.barcode || '',
+      photo: (local && local.photo) || '', photoPath: r.photo_path || '',
+      createdAt: Number(r.created_at) || Date.now(), updatedAt: Number(r.updated_at) || 0
+    };
+  }
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(blob);
+    });
+  }
+  async function downloadPhoto(c, path) {
+    try {
+      const res = await c.storage.from('photos').download(path);
+      if (res.error || !res.data) return null;
+      return await blobToDataUrl(res.data);
+    } catch (e) { return null; }
+  }
+
+  // Two-way sync. The newest change wins (by time it was saved).
+  async function runSync() {
+    setSyncState('syncing');
+    let changedHere = false;
+    try {
+      const c = await getSb();
+      const uid = user.id;
+      const photos = c.storage.from('photos');
+
+      // 1. Deletions made on this phone
+      const meta = readMeta();
+      while (meta.pendingDeletes.length) {
+        const d = meta.pendingDeletes[0];
+        const res = await c.from('items').upsert({ user_id: uid, id: String(d.id).slice(0, 64), deleted: true, updated_at: Date.now(),
+          brand: '', product: '', shade: '', color: '', notes: '', barcode: '', photo_path: '' }, { onConflict: 'user_id,id' });
+        if (res.error) throw res.error;
+        if (d.photoPath) await photos.remove([d.photoPath]).catch(() => {});
+        meta.pendingDeletes.shift();
+        writeMeta(meta);
+      }
+
+      // 2. What's saved online
+      const res = await c.from('items').select('*');
+      if (res.error) throw res.error;
+      const rows = res.data || [];
+      const remote = new Map(rows.map((r) => [r.id, r]));
+
+      // 3. Bring newer things from online to this phone
+      for (const r of rows) {
+        const local = items.find((x) => x.id === r.id);
+        const localTime = local ? Number(local.updatedAt) || 0 : -1;
+        if (r.deleted) {
+          if (local && localTime <= r.updated_at) {
+            await dbDelete(local.id);
+            items = items.filter((x) => x.id !== local.id);
+            changedHere = true;
+          }
+          continue;
+        }
+        if (!local || r.updated_at > localTime) {
+          const it = fromRow(r, local);
+          if (r.photo_path && (!local || !local.photo || local.photoPath !== r.photo_path)) {
+            it.photo = (await downloadPhoto(c, r.photo_path)) || (local && local.photo) || '';
+          } else if (!r.photo_path) {
+            it.photo = '';
+          }
+          await dbPut(it);
+          const i = items.findIndex((x) => x.id === it.id);
+          if (i >= 0) items[i] = it; else items.push(it);
+          changedHere = true;
+        }
+      }
+
+      // 4. Send newer things from this phone online
+      for (const it of items.slice()) {
+        const r = remote.get(it.id);
+        const t = Number(it.updatedAt) || 0;
+        const photoNeedsUpload = !!(it.photo && !it.photoPath);
+        if (r && t <= r.updated_at && !photoNeedsUpload) continue;
+        let path = it.photo ? (it.photoPath || '') : '';
+        if (photoNeedsUpload) {
+          path = uid + '/' + it.id + '-' + Date.now().toString(36) + '.jpg';
+          const blob = await (await fetch(it.photo)).blob();
+          const up = await photos.upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+          if (up.error) throw up.error;
+        }
+        const save = await c.from('items').upsert(toRow(it, uid, path), { onConflict: 'user_id,id' });
+        if (save.error) throw save.error;
+        if (r && r.photo_path && r.photo_path !== path) await photos.remove([r.photo_path]).catch(() => {});
+        if (it.photoPath !== path) { it.photoPath = path; await dbPut(it); }
+      }
+
+      items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      meta.lastSync = Date.now();
+      writeMeta(meta);
+      setSyncState('ok');
+    } catch (e) {
+      console.warn('Sync failed', e);
+      setSyncState(navigator.onLine === false ? 'offline' : 'error');
+    }
+    if (changedHere) refreshView();
+  }
+
+  window.addEventListener('online', () => scheduleSync(0));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - lastSyncTry > 30000) scheduleSync(0);
+  });
+
+  function authErrorText(e) {
+    const m = String((e && e.message) || '');
+    if ((e && e.status === 429) || /rate|seconds|too many/i.test(m)) return 'Please wait a minute, then ask for a new code.';
+    if (/expired|invalid|token/i.test(m)) return 'That code didn\'t work. Check it, or ask for a new one.';
+    if (/not authorized/i.test(m)) return 'This email can\'t receive codes yet. The app\'s email setup isn\'t finished.';
+    if (/fetch|network|load/i.test(m) || navigator.onLine === false) return 'Couldn\'t connect. Check your internet and try again.';
+    return 'Something went wrong. Please try again.';
+  }
+
+  async function signOut() {
+    await sync();
+    const pending = readMeta().pendingDeletes.length > 0;
+    if ((pending || syncState !== 'ok') &&
+      !confirm('Some changes are not saved online yet (no internet?). If you sign out now, they will be lost. Sign out anyway?')) return false;
+    try { const c = await getSb(); await c.auth.signOut({ scope: 'local' }); } catch (e) { /* still sign out on this phone */ }
+    user = null;
+    await dbClear();
+    items = [];
+    writeMeta({ pendingDeletes: [], lastSync: 0 });
+    setSyncState('idle');
+    return true;
+  }
+
+  async function deleteAccount() {
+    const c = await getSb();
+    const uid = user.id;
+    const photos = c.storage.from('photos');
+    for (let round = 0; round < 50; round++) {
+      const list = await photos.list(uid, { limit: 100 });
+      if (list.error) throw list.error;
+      const files = (list.data || []).filter((f) => f && f.name);
+      if (!files.length) break;
+      const rm = await photos.remove(files.map((f) => uid + '/' + f.name));
+      if (rm.error) throw rm.error;
+    }
+    const res = await c.rpc('delete_my_account');
+    if (res.error) throw res.error;
+    try { await c.auth.signOut({ scope: 'local' }); } catch (e) { /* account is already gone */ }
+    user = null;
+    writeMeta({ pendingDeletes: [], lastSync: 0 });
+    for (const it of items) {
+      if (it.photoPath) { it.photoPath = ''; await dbPut(it); }
+    }
+    setSyncState('idle');
+  }
+
+  function askToDeleteAccount() {
+    return new Promise((resolve) => {
+      const bg = document.createElement('div');
+      bg.className = 'sheet-bg';
+      bg.style.zIndex = '25';
+      bg.innerHTML = '<div class="sheet pop" role="dialog" aria-modal="true" aria-labelledby="daTitle">' +
+        '<h2 id="daTitle">Delete your account?</h2>' +
+        '<div class="muted" style="font-weight:600;line-height:1.4">This permanently deletes your account and everything saved online: all items and photos, on every device. ' +
+        'It can\'t be undone.<br><br>Items on this phone stay here, saved only on this phone.</div>' +
+        '<button class="btn" id="daYes" style="background:#A3243F">Delete my account forever</button>' +
+        '<button class="btn secondary" id="daNo">Keep my account</button></div>';
+      document.body.appendChild(bg);
+      const done = (v) => { bg.remove(); resolve(v); };
+      bg.querySelector('#daYes').addEventListener('click', () => done(true));
+      bg.querySelector('#daNo').addEventListener('click', () => done(false));
+      bg.addEventListener('click', (e) => { if (e.target === bg) done(false); });
+      bg.querySelector('#daNo').focus();
+    });
+  }
+
+  function openAccountSheet() {
+    document.getElementById('toast').classList.remove('show');
+    const bg = document.createElement('div');
+    bg.className = 'sheet-bg';
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet pop';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.setAttribute('aria-labelledby', 'acTitle');
+    bg.appendChild(sheet);
+    document.body.appendChild(bg);
+    let step = 'email', email = '', busy = false, error = '';
+    const close = () => { accountDraw = null; bg.remove(); };
+    bg.addEventListener('click', (e) => { if (e.target === bg && !busy) close(); });
+    const errHtml = () => error ? '<div role="alert" style="color:#A3243F;font-weight:700">' + esc(error) + '</div>' : '';
+    const privacy = '<a href="privacy.html" target="_blank" rel="noopener" style="color:var(--primary);font-weight:800">privacy policy</a>';
+
+    function statusLong() {
+      const last = readMeta().lastSync;
+      if (syncState === 'syncing') return 'Saving…';
+      if (syncState === 'ok') return 'All saved ✓' + (last ? ' · ' + new Date(last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
+      if (syncState === 'offline') return 'Offline. Will save when you\'re back online.';
+      if (syncState === 'error') return 'Couldn\'t save online. Will try again.';
+      return 'Getting ready…';
+    }
+
+    function draw() {
+      if (user) {
+        sheet.innerHTML =
+          '<div class="eyebrow">Your account</div><h2 id="acTitle">Saved online</h2>' +
+          '<div class="kv"><div><span>Signed in as</span><span style="word-break:break-all;text-align:right">' + esc(user.email || '') + '</span></div>' +
+          '<div><span>Status</span><span style="text-align:right">' + esc(statusLong()) + '</span></div></div>' +
+          errHtml() +
+          '<button class="btn" id="acSync"' + (syncState === 'syncing' || busy ? ' disabled' : '') + '>Sync now</button>' +
+          '<button class="btn secondary" id="acOut"' + (busy ? ' disabled' : '') + '>Sign out</button>' +
+          '<div class="row between"><a href="privacy.html" target="_blank" rel="noopener" class="link-btn" style="text-decoration:none">Privacy policy</a>' +
+          '<button class="danger" id="acDelete"' + (busy ? ' disabled' : '') + '>Delete my account</button></div>' +
+          '<button class="btn secondary" id="acClose">Close</button>';
+        sheet.querySelector('#acSync').addEventListener('click', () => { error = ''; sync(); });
+        sheet.querySelector('#acOut').addEventListener('click', async () => {
+          busy = true; draw();
+          const out = await signOut();
+          busy = false;
+          if (out) { close(); toast('Signed out. Your collection is safe online.'); location.hash = '#/'; route(); }
+          else draw();
+        });
+        sheet.querySelector('#acDelete').addEventListener('click', async () => {
+          if (!(await askToDeleteAccount())) return;
+          busy = true; error = ''; draw();
+          try {
+            await deleteAccount();
+            busy = false;
+            close();
+            toast('Your account was deleted');
+            route();
+          } catch (e) {
+            busy = false;
+            error = 'Couldn\'t delete your account right now. Check your internet and try again.';
+            draw();
+          }
+        });
+        sheet.querySelector('#acClose').addEventListener('click', close);
+        return;
+      }
+
+      if (step === 'email') {
+        sheet.innerHTML =
+          '<div class="eyebrow">Optional</div><h2 id="acTitle">Save your collection online</h2>' +
+          '<div class="muted" style="font-weight:600;line-height:1.4">Sign in to keep your makeup safe if you lose your phone, and to see it on all your devices. ' +
+          'No password needed: we\'ll email you a sign-in code.</div>' +
+          '<label class="field"><span>Your email</span><input class="input" id="acEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(email) + '"></label>' +
+          errHtml() +
+          '<button class="btn" id="acSend"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Sending…' : 'Email me a code') + '</button>' +
+          '<div class="muted" style="font-size:13px;font-weight:600;line-height:1.4">Items already on this phone will be added to your account. See our ' + privacy + '.</div>' +
+          '<button class="btn secondary" id="acClose">Not now</button>';
+        const input = sheet.querySelector('#acEmail');
+        const send = async () => {
+          email = input.value.trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { error = 'Please type your full email address.'; draw(); return; }
+          busy = true; error = ''; draw();
+          try {
+            const c = await startAuth();
+            const res = await c.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname } });
+            if (res.error) throw res.error;
+            step = 'code';
+          } catch (e) { error = authErrorText(e); }
+          busy = false; draw();
+        };
+        sheet.querySelector('#acSend').addEventListener('click', send);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+        sheet.querySelector('#acClose').addEventListener('click', close);
+        if (!busy) input.focus();
+        return;
+      }
+
+      sheet.innerHTML =
+        '<h2 id="acTitle">Check your email</h2>' +
+        '<div class="muted" style="font-weight:600;line-height:1.4">We sent a code to <b>' + esc(email) + '</b>. It can take a minute, and it might be in your spam folder.</div>' +
+        '<label class="field"><span>Sign-in code</span><input class="input" id="acCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" style="letter-spacing:6px;font-size:22px;text-align:center"></label>' +
+        errHtml() +
+        '<button class="btn" id="acVerify"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Signing in…' : 'Sign in') + '</button>' +
+        '<div class="row between"><button class="link-btn" id="acBack">Use a different email</button><button class="link-btn" id="acResend">Send a new code</button></div>';
+      const codeInput = sheet.querySelector('#acCode');
+      const verify = async () => {
+        const code = codeInput.value.replace(/\D/g, '');
+        if (code.length < 6) { error = 'Please type the code from the email.'; draw(); return; }
+        busy = true; error = ''; draw();
+        try {
+          const c = await startAuth();
+          const res = await c.auth.verifyOtp({ email: email, token: code, type: 'email' });
+          if (res.error) throw res.error;
+          busy = false;
+          if (res.data && res.data.session) onSession(res.data.session);
+          toast(items.length ? 'Signed in. Saving online…' : 'Signed in ✨');
+          close();
+          return;
+        } catch (e) { error = authErrorText(e); }
+        busy = false; draw();
+      };
+      sheet.querySelector('#acVerify').addEventListener('click', verify);
+      codeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') verify(); });
+      sheet.querySelector('#acBack').addEventListener('click', () => { step = 'email'; error = ''; draw(); });
+      sheet.querySelector('#acResend').addEventListener('click', async () => {
+        error = '';
+        try {
+          const c = await startAuth();
+          const res = await c.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname } });
+          if (res.error) throw res.error;
+          toast('New code sent');
+        } catch (e) { error = authErrorText(e); draw(); }
+      });
+      if (!busy) codeInput.focus();
+    }
+    accountDraw = draw;
+    draw();
+  }
+
   // ---------- Screens ----------
   let filter = 'All';
   let homeQuery = '';
@@ -577,8 +1035,10 @@
     $app.innerHTML =
       '<div class="stack">' +
         '<div class="row between">' +
-          '<div><div class="muted" style="font-weight:600">Hello again</div><h1>My collection</h1></div>' +
-          '<div class="row" style="gap:8px"><span class="pill">' + items.length + (items.length === 1 ? ' item' : ' items') + '</span>' +
+          '<div style="min-width:0"><div class="muted" style="font-weight:600"><span id="syncLabel">' + esc(syncText()) + '</span>' +
+            (CLOUD ? ' · ' + items.length + (items.length === 1 ? ' item' : ' items') : '') + '</div><h1>My collection</h1></div>' +
+          '<div class="row" style="gap:8px">' + (CLOUD ? '' : '<span class="pill">' + items.length + (items.length === 1 ? ' item' : ' items') + '</span>') +
+          (CLOUD ? '<button class="icon-btn" id="accountBtn" aria-label="' + (user ? 'Your account' : 'Sign in to save online') + '" style="' + (user ? 'background:var(--primary);color:#fff' : 'color:var(--text)') + '">' + ICON.user + '</button>' : '') +
           '<button class="icon-btn" id="moreBtn" aria-label="Backup options">' + ICON.more + '</button></div>' +
         '</div>' +
         (items.length ? (
@@ -607,6 +1067,8 @@
     });
     $app.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.filter; renderHome(); }));
     document.getElementById('moreBtn').addEventListener('click', openBackupSheet);
+    const accountBtn = document.getElementById('accountBtn');
+    if (accountBtn) accountBtn.addEventListener('click', openAccountSheet);
   }
 
   function cardHtml(it) {
@@ -664,7 +1126,7 @@
       photoInput.addEventListener('change', async () => {
         const f = photoInput.files && photoInput.files[0];
         if (!f) return;
-        try { readFields(); draft.photo = await readPhoto(f); draw(); } catch (e) { toast('Sorry, that photo could not be read'); }
+        try { readFields(); draft.photo = await readPhoto(f); draft.photoPath = ''; draw(); } catch (e) { toast('Sorry, that photo could not be read'); }
       });
       $app.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { readFields(); draft.category = b.dataset.cat; draw(); }));
       $app.querySelectorAll('[data-color]').forEach((b) => b.addEventListener('click', () => {
@@ -896,7 +1358,10 @@
     bg.className = 'sheet-bg';
     bg.innerHTML = '<div class="sheet pop" role="dialog" aria-modal="true" aria-labelledby="bkTitle">' +
       '<h2 id="bkTitle">Back up your collection</h2>' +
-      '<div class="muted" style="font-weight:600">Your items are saved only on this phone. Save a backup file now and then, so you never lose them.</div>' +
+      (CLOUD && user
+        ? '<div class="muted" style="font-weight:600">You\'re signed in, so your items are saved online too. A backup file is an extra copy you keep yourself.</div>'
+        : '<div class="muted" style="font-weight:600">Your items are saved only on this phone. Save a backup file now and then, so you never lose them.' +
+          (CLOUD ? ' Or sign in (the person button) to save them online automatically.' : '') + '</div>') +
       '<button class="btn" id="bkExport">Save backup file</button>' +
       '<button class="btn secondary" id="bkImport">Restore from a backup</button>' +
       '<button class="btn secondary" id="bkClose">Close</button></div>';
@@ -945,11 +1410,11 @@
   });
 
   // ---------- Navigation ----------
-  function route() {
+  function route(keepScroll) {
     const h = location.hash.replace(/^#/, '') || '/';
     const parts = h.split('/').filter(Boolean);
     let nav = 'home';
-    window.scrollTo(0, 0);
+    if (keepScroll !== true) window.scrollTo(0, 0);
     if (parts[0] === 'add') { nav = 'add'; const p = pendingPrefill; pendingPrefill = null; renderForm(null, p); }
     else if (parts[0] === 'edit') { const it = items.find((x) => x.id === parts[1]); if (it) renderForm(it); else location.hash = '#/'; }
     else if (parts[0] === 'check') { nav = 'check'; renderCheck(); }
@@ -960,9 +1425,9 @@
       if (a.dataset.nav === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
   }
-  window.addEventListener('hashchange', route);
+  window.addEventListener('hashchange', () => route());
 
-  loadItems().then(route);
+  loadItems().then(() => { route(); initCloud(); });
 })();
 </script>
 </body>

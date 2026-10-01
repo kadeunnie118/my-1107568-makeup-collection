@@ -9,13 +9,27 @@ A simple web app to keep track of your makeup and tools, so you never buy a dupl
 - **Do I already have this?**: type what you're about to buy (e.g. "nude lipstick") and see what you already own, plus similar colors.
 - **Duplicate warning**: if you add the same brand and shade twice, the app asks before saving.
 - **Barcode scanning** (new): on *Add item*, tap **Scan the barcode**. The app warns you if you already own that exact item, then looks the product up in [Open Beauty Facts](https://world.openbeautyfacts.org) (a free shared database) and asks **"Is this it?"** before filling in the brand and name. On *Do I already have this?*, tap **Scan a barcode** in the store to check instantly. If the camera can't read it, you can type the numbers under the barcode instead.
+- **Accounts (optional)**: tap the person button to sign in with your email (we send a 6-digit code, no password). Your items and photos are then saved online and appear on all your devices. You can sign out or delete your account at any time. Signing in isn't required.
 - **Backup**: save your collection to a file and restore it later (tap the ••• button on the home screen).
 
 ## Important: where your data is saved
 
-Everything is saved **only on the phone or computer you use**, inside the browser.
-It does not sync between devices, and clearing the browser's website data will erase it.
-Use **••• → Save backup file** now and then.
+If you **don't sign in**, everything is saved **only on the phone or computer you use**, inside the browser.
+Clearing the browser's website data will erase it, so use **••• → Save backup file** now and then.
+
+If you **sign in**, your items and photos are also saved online (Supabase) and sync between your devices.
+See [privacy.html](privacy.html).
+
+## Accounts setup (Supabase)
+
+The account button only appears once `SUPABASE_URL` and `SUPABASE_KEY` are filled in near the
+"Accounts & online saving" section of `index.html`. Setup files are in the `setup/` folder:
+
+- `setup/supabase-setup.sql`: run once in Supabase → SQL Editor (tables, security rules, photo storage, delete-account function)
+- `setup/email-template.html`: paste into Supabase → Authentication → Emails (Magic Link and Confirm signup)
+
+Sign-in emails need a custom SMTP sender (we use a Hostinger mailbox), because Supabase's built-in
+email only reaches the project's own team.
 
 ## How updates go live
 
@@ -43,6 +57,8 @@ to the `public_html/makeup` folder automatically, usually within a minute.
 | `index.html` | The whole app: screens, styles and code |
 | `manifest.webmanifest` | Name, colors and icon used when added to the home screen |
 | `icon.svg`, `icon-*.png` | The app icon |
+| `privacy.html` | Privacy policy |
+| `setup/` | One-time Supabase setup files |
 
 ## Ideas for later
 
@@ -50,4 +66,4 @@ to the `public_html/makeup` folder automatically, usually within a minute.
 2. A shared product catalog, so items can be matched automatically
 3. Reading the brand and shade from the photo
 4. Scanning a whole drawer at once
-5. Accounts and online saving, so friends can have their own collections
+5. ~~Accounts and online saving~~ (done)

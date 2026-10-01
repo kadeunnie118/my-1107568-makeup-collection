@@ -1,0 +1,18 @@
+<!--
+  Sign-in email for My Makeup Collection.
+  Paste this into Supabase → Authentication → Emails, in BOTH templates:
+    • "Magic Link"      subject: Your sign-in code for My Makeup
+    • "Confirm signup"  subject: Your sign-in code for My Makeup
+  {{ .Token }} becomes the 6-digit code; {{ .ConfirmationURL }} becomes the link.
+-->
+<div style="font-family:Arial,Helvetica,sans-serif;background:#FFF5F7;padding:24px;color:#3D2C3A">
+  <div style="max-width:440px;margin:0 auto;background:#ffffff;border-radius:20px;padding:28px">
+    <h2 style="margin:0 0 8px;font-size:22px">Your sign-in code</h2>
+    <p style="margin:0 0 20px;color:#7A5A6E;font-size:15px">Type this code in My Makeup Collection:</p>
+    <div style="font-size:34px;font-weight:bold;letter-spacing:8px;background:#FFE4EA;border-radius:16px;padding:16px;text-align:center;color:#B83D62">{{ .Token }}</div>
+    <p style="margin:20px 0 0;color:#7A5A6E;font-size:14px">
+      Or, if you're using the app in this browser, <a href="{{ .ConfirmationURL }}" style="color:#B83D62;font-weight:bold">tap here to sign in</a>.
+    </p>
+    <p style="margin:16px 0 0;color:#7A5A6E;font-size:13px">The code works for 1 hour. If you didn't ask to sign in, you can ignore this email.</p>
+  </div>
+</div>
