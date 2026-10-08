@@ -4,7 +4,7 @@ A simple web app to keep track of your makeup and tools, so you never buy a dupl
 
 ## What it does
 
-- **Add an item**: take a photo, choose a category, type the brand. Product, shade and color are optional.
+- **Add an item**: take a photo or pick one from your gallery, choose a category, type the brand. Product, shade and color are optional.
 - **My collection**: a photo grid you can search and filter by category.
 - **Do I already have this?**: type what you're about to buy (e.g. "nude lipstick") and see what you already own, plus similar colors.
 - **Duplicate warning**: if you add the same brand and shade twice, the app asks before saving.

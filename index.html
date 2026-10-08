@@ -77,6 +77,8 @@
   .photo-box img { width: 100%; max-height: 320px; object-fit: cover; display: block; }
   .photo-box .hint { display: flex; flex-direction: column; align-items: center; gap: 8px; font-weight: 800; color: #8E2A4A; padding: 40px 16px; }
   .photo-box .retake { position: absolute; right: 12px; bottom: 12px; background: #fff; border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 700; }
+  .photo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: -4px; }
+  .photo-actions .btn { height: 52px; font-size: 15px; padding: 0 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .colors { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .color-opt { width: 40px; height: 40px; border-radius: 999px; border: 3px solid #fff; box-shadow: 0 0 0 1px #E8C9D2; padding: 0; }
   .color-opt[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--primary); }
@@ -352,6 +354,8 @@
     sparkle: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3D2C3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>',
     lipstick: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#B83D62" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10V5l6-2v7"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="6" y="14" width="12" height="7" rx="1.5"/></svg>',
     more: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',
+    cam: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    image: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>',
     user: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
     barcode: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>'
   };
@@ -1021,11 +1025,18 @@
         '<div class="stack">' +
           '<div class="row"><a href="' + (existing ? '#/item/' + esc(draft.id) : '#/') + '" class="icon-btn" aria-label="Back" style="color:inherit">' + ICON.back + '</a>' +
           '<h1 style="font-size:24px">' + (existing ? 'Edit item' : 'Add an item') + '</h1></div>' +
-          '<button type="button" class="photo-box" id="photoBtn" aria-label="' + (draft.photo ? 'Retake photo' : 'Take or choose a photo') + '">' +
-            (draft.photo ? '<img src="' + esc(draft.photo) + '" alt="Your photo"><span class="retake">Retake</span>'
-              : '<span class="hint">' + ICON.camera + 'Take a photo<span class="muted" style="font-weight:600;font-size:14px">or choose one from your phone</span></span>') +
+          '<button type="button" class="photo-box" id="photoBtn" aria-label="' + (draft.photo ? 'Change photo' : 'Add a photo') + '">' +
+            (draft.photo ? '<img src="' + esc(draft.photo) + '" alt="Your photo"><span class="retake">Change</span>'
+              : '<span class="hint">' + ICON.camera + 'Add a photo<span class="muted" style="font-weight:600;font-size:14px">Take a new one, or use one you already have</span></span>') +
           '</button>' +
-          '<input type="file" id="photoInput" accept="image/*" capture="environment" class="sr-only" tabindex="-1" aria-hidden="true">' +
+          '<div class="photo-actions">' +
+            '<button type="button" class="btn secondary" id="photoCamBtn">' + ICON.cam + 'Take a photo</button>' +
+            '<button type="button" class="btn secondary" id="photoPickBtn">' + ICON.image + 'From gallery</button>' +
+          '</div>' +
+          (draft.photo ? '<button type="button" class="link-btn" id="photoRemove" style="align-self:center;margin-top:-8px">Remove photo</button>' : '') +
+          // Two hidden pickers: one opens the camera, the other opens the phone's photos
+          '<input type="file" id="photoCamInput" accept="image/*" capture="environment" class="sr-only" tabindex="-1" aria-hidden="true">' +
+          '<input type="file" id="photoInput" accept="image/*" class="sr-only" tabindex="-1" aria-hidden="true">' +
           (draft.barcode
             ? '<div class="barcode-row"><span class="row" style="gap:10px;color:#8E2A4A">' + ICON.barcode +
                 '<span style="color:var(--text)"><span class="label">Barcode</span><b>' + esc(draft.barcode) + '</b></span></span>' +
@@ -1050,12 +1061,18 @@
         '</div>';
 
       const photoInput = document.getElementById('photoInput');
+      const photoCamInput = document.getElementById('photoCamInput');
       document.getElementById('photoBtn').addEventListener('click', () => photoInput.click());
-      photoInput.addEventListener('change', async () => {
-        const f = photoInput.files && photoInput.files[0];
+      document.getElementById('photoPickBtn').addEventListener('click', () => photoInput.click());
+      document.getElementById('photoCamBtn').addEventListener('click', () => photoCamInput.click());
+      [photoInput, photoCamInput].forEach((input) => input.addEventListener('change', async () => {
+        const f = input.files && input.files[0];
         if (!f) return;
-        try { readFields(); draft.photo = await readPhoto(f); draft.photoPath = ''; draw(); } catch (e) { toast('Sorry, that photo could not be read'); }
-      });
+        try { readFields(); draft.photo = await readPhoto(f); draft.photoPath = ''; draw(); }
+        catch (e) { input.value = ''; toast('Sorry, that photo could not be opened. Try another one, or take a new photo.'); }
+      }));
+      const photoRemove = document.getElementById('photoRemove');
+      if (photoRemove) photoRemove.addEventListener('click', () => { readFields(); draft.photo = ''; draft.photoPath = ''; draw(); });
       $app.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { readFields(); draft.category = b.dataset.cat; draw(); }));
       $app.querySelectorAll('[data-color]').forEach((b) => b.addEventListener('click', () => {
         readFields();
